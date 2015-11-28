@@ -12,7 +12,7 @@
 #include <limits.h>
 
 int hadamard_entry(int k, int n){
-	int a = k && n;
+	int a = k & n;
     	int count=0;
 	while(a!=0){
   		a = a && (a-1);

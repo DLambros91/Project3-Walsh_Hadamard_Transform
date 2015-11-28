@@ -1,5 +1,4 @@
-/*
- * Walsh Hadamard Transform
+/* Walsh Hadamard Transform
  * Serial Implementation
  * @author
  * 	Harsh Shah
@@ -12,6 +11,21 @@
 #include <math.h>
 #include <limits.h>
 
+int hadamard_entry(int k, int n){
+	int a = k && n;
+    	int count=0;
+	while(a!=0){
+  		a = a && (a-1);
+  		count++;
+	}
+	if((count % 2) == 0){
+		return 1;
+	}
+	return -1;
+}
+
+
+
 int main(int argc, char** argv){
 	
 	int m; //used for dimension calculation for vector and matrix
@@ -19,11 +33,12 @@ int main(int argc, char** argv){
 	printf("Please Enter the m in 2^m \n");
 	scanf("%d", &m);
 
-	int dimension = (int)pow(2, (double)m);
+	//Dimension of Vector and Matrix
+	int dimension = (int)pow(2,(m));
 
 	//Display Input to user
-	printf("Input M is: %d ", m);
-	printf("Row and Column size is %d", dimension);
+	printf("Input M is: %d \n", m);
+	printf("Row and Column size is %d \n", dimension);
 
 	//Allocate Vector
 	int *vector = (int*)malloc(dimension * sizeof(int));
@@ -50,13 +65,7 @@ int main(int argc, char** argv){
 	int i,j;
 	for(i = 0; i < dimension; i++){
 		for(j = 0; j < dimension; j++){ //iterate through matrix
-			unsigned int PosOrNeg = (i*j) && (UINT_MAX); //AND the Product of the location indices with a string one '1''s 
-			int ones = __builtin_popcount(PosOrNeg); //Count the number of ones in PosOrNeg to decide if index should be 1 or -1
-			if((ones % 2) == 0){
-				matrix[i][j] = 1;
-			}else{
-				matrix[i][j] = -1;
-			}
+			matrix[i][j] = hadamard_entry(i,j);
 		}
 	}
 
@@ -65,7 +74,7 @@ int main(int argc, char** argv){
 	//Print the Matrix to Test for Correctness
 	for(i = 0; i < dimension; i++){
 		for(j = 0; j < dimension; j++){
-			printf("%d", matrix[i][j]);
+			printf("%d\t", matrix[i][j]);
 		}
 		printf("\n");
 	}

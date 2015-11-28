@@ -1,4 +1,4 @@
-/* Walsh Hadamard Transform
+/*walsh Hadamard Transform
  * Serial Implementation
  * @author
  * 	Harsh Shah
@@ -9,15 +9,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <limits.h>
+
+
+int nofone(int input) {
+  int numOneBits = 0;
+
+  int currNum = input;
+  while (currNum != 0) {
+    if ((currNum & 1) == 1) {
+      numOneBits++;
+    }
+    currNum = currNum >> 1;
+  }
+  return numOneBits;
+} 
 
 int hadamard_entry(int k, int n){
 	int a = k & n;
-    	int count=0;
-	while(a!=0){
-  		a = a && (a-1);
-  		count++;
-	}
+    int count = nofone(a); 
 	if((count % 2) == 0){
 		return 1;
 	}
@@ -33,7 +42,6 @@ int main(int argc, char** argv){
 	printf("Please Enter the m in 2^m \n");
 	scanf("%d", &m);
 
-	//Dimension of Vector and Matrix
 	int dimension = (int)pow(2,(m));
 
 	//Display Input to user

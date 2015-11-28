@@ -11,7 +11,7 @@
 #include <math.h>
 
 
-int nofone(int input) {
+int bitwise_dotproduct(int input) {
   int numOneBits = 0;
 
   int currNum = input;
@@ -26,7 +26,7 @@ int nofone(int input) {
 
 int hadamard_entry(int k, int n){
 	int a = k & n;
-    int count = nofone(a); 
+    int count = bitwise_dotproduct(a); 
 	if((count % 2) == 0){
 		return 1;
 	}
@@ -47,7 +47,7 @@ int main(int argc, char** argv){
 	//Display Input to user
 	printf("Input M is: %d \n", m);
 	printf("Row and Column size is %d \n", dimension);
-
+	printf("\n");
 	//Allocate Vector
 	int *vector = (int*)malloc(dimension * sizeof(int));
 		
@@ -60,14 +60,14 @@ int main(int argc, char** argv){
 	}
 
 	//Allocate Result Vector
-	int* result = (int*)malloc(sizeof(int) * dimension);
+	double* result = (double*)malloc(sizeof(double) * dimension);
 
 	//Fill vector with random integers
 	z = 0;
 	for(; z < dimension; z++){
 		vector[z] = rand()%2;
 	}
-
+	
 
 	//Generate the Hadamard Matrix
 	int i,j;
@@ -78,14 +78,45 @@ int main(int argc, char** argv){
 	}
 
 
+	//Perform Matrix Vector Multipliocation
+	int k;
+	for(i = 0; i < dimension; i++){
+		int sum = 0;
+		for(j = 0; j < dimension; j++){
+			sum += matrix[i][j]*vector[j];
+		}
+		result[i] = sum;
+	}
+	
+	//Multiply the result with Hadamard Matrix Coeffecient
+	double hadamard_coeff = 1 / pow(2,(double)(dimension/2));
+	for(i = 0; i < dimension; i++){
+		result[i] = result[i] * hadamard_coeff;
+	}
 
 	//Print the Matrix to Test for Correctness
+	printf("Hadamard Matrix \n");
 	for(i = 0; i < dimension; i++){
 		for(j = 0; j < dimension; j++){
 			printf("%d\t", matrix[i][j]);
 		}
 		printf("\n");
 	}
+
+	printf("\n");
+
+	printf("Input Vector: \n");	
+	for(i = 0; i < dimension; i++){
+		printf("%d \n",vector[i]);
+	}	
+
+
+	printf("\n");
+	//Print Result Vector to Test for Correctness
+	printf("Result Vector: \n");	
+	for(i = 0; i < dimension; i++){
+		printf("%f \n",result[i]);
+	}	
 
 	//Free the memory
 	free(vector);

@@ -16,12 +16,10 @@ int main(int argc, char** argv){
 	
 	int m; //used for dimension calculation for vector and matrix
 	
-	if(argc == 2){
-		m = atoi(argv[1]);
-	}
+	printf("Please Enter the m in 2^m \n");
+	scanf("%d", &m);
 
-	int dimension; //Holds the Row and Column size of matrix
-	dimension = (1 << m); // 2^m
+	int dimension = (int)pow(2, (double)m);
 
 	//Display Input to user
 	printf("Input M is: %d ", m);

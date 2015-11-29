@@ -21,6 +21,28 @@
 
 MPI_status status;
 
+int bitwise_dotproduct(int input) {
+  int numOneBits = 0;
+
+  int currNum = input;
+  while (currNum != 0) {
+    if ((currNum & 1) == 1) {
+      numOneBits++;
+    }
+    currNum = currNum >> 1;
+  }
+  return numOneBits;
+} 
+
+int hadamard_entry(int k, int n){
+	int a = k & n;
+    int count = bitwise_dotproduct(a); 
+	if((count % 2) == 0){
+		return 1;
+	}
+	return -1;
+}
+
 main(int argc, char **argv){
 	
 	//Dimension Paramter dim
@@ -60,11 +82,17 @@ main(int argc, char **argv){
 	/********** master process **********/
 	if(procid == MASTER){
 		//Initialize Hadamard Matrix
+		for(i = 0; i < dim; i++){
+			for(j = 0; j < dim; j++){
+				matrix[i][j] = hadamard_entry(i,j);
+			}
+		}
 		//Initialize Argument Vector
-		//Send Matrix to workers
-		//Send Vector to workers
-		//Send dim to workers
-
+		for(i = 0; i < dim; i++){
+			vector[i] = rand()%2;	
+		}
+		//Send Parameters
+		
 		//Recieve from workers
 	}
 	/********** worker process **********/
@@ -75,6 +103,7 @@ main(int argc, char **argv){
 	}
 
 	MPI_Finalize();
+	
 	free(vector);
 	free(result);
 	iter = 0;

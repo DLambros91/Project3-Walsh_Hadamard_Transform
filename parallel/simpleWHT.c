@@ -64,9 +64,10 @@ int main(){
 for(i = 0; i < dim; i++){
 		int sum = 0;
 		int j;
-		for(j = 0; j < dim; j++){
-			sum += hadamard_entry(i,j) * in[j];
-		}
+#pragma omp parallel for reduction(+ : sum)
+for(j = 0; j < dim; j++){
+		sum = sum + hadamard_entry(i,j) * in[j];
+}
 		out[i] = sum * hadamard_coeff;
 }
 
@@ -79,4 +80,3 @@ for(i = 0; i < dim; i++){
 	return 0;		
 
 }
-

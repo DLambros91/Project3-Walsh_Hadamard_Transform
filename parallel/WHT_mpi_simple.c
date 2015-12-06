@@ -1,267 +1,198 @@
 /*
-
 	Walsh Hadamard Transform
-
 	MPI Implementation
-
 	@author
-
 		Harsh Shah
-
 		Demetrios Lambropoulos
-
 		Davidek Lambropoulos
-
 */
 
 
-
-
-
 #include <stdlib.h>
-
 #include <stdio.h>
-
 #include <math.h>
+#include <mpi.h>
 
-#include "mpi.h"
-
-
-
-
-
-
-
-#define MASTER 0       /* id of the first process */ 
-
+#define MASTER 0
 #define FROM_MASTER 1  /* setting a message type */ 
-
 #define FROM_WORKER 2  /* setting a message type */
 
+//Generate the matrix
+int alloc_matrix(int ***array, int n, int m){
+	
+    /* allocate the n*m contiguous items */
+    int *p = (int *)malloc(n*m*sizeof(int));
+    if (!p) return -1;
 
-
-MPI_status status;
-
-
-
-int bitwise_dotproduct(int input) {
-
-  int numOneBits = 0;
-
-
-
-  int currNum = input;
-
-  while (currNum != 0) {
-
-    if ((currNum & 1) == 1) {
-
-      numOneBits++;
-
+    /* allocate the row pointers into the memory */
+    (*array) = (int **)malloc(n*sizeof(int*));
+    if (!(*array)) {
+       free(p);
+       return -1;
     }
 
-    currNum = currNum >> 1;
+    /* set up the pointers into the contiguous memory */
+    for (int i=0; i<n; i++) 
+       (*array)[i] = &(p[i*m]);
 
-  }
-
-  return numOneBits;
-
-} 
-
-
-
-int hadamard_entry(int k, int n){
-
-	int a = k & n;
-
-    int count = bitwise_dotproduct(a); 
-
-	if((count % 2) == 0){
-
-		return 1;
-
-	}
-
-	return -1;
-
+    return 0;
 }
 
+//dealloc matrix
+int dealloc_matrix(int ***array){
+	/* free the memory - the first element of the array is at the start */
+	free(&((*array)[0][0]));
 
+	/* free the pointers into the memory */
+	free(*array);
 
-main(int argc, char **argv){
+	return 0;
+}
 
+//Performs a bitwise dot product
+int bitwise_dotproduct(int input) {
+  int numOneBits = 0;
+
+  int currNum = input;
+  while (currNum != 0) {
+    if ((currNum & 1) == 1) {
+      numOneBits++;
+    }
+    currNum = currNum >> 1;
+  }
+  return numOneBits;
+} 
+
+//Calculates the value of the Hadamard matrix at any index
+int hadamard_entry(int k, int n){
+	int a = k & n;
+    	int count = bitwise_dotproduct(a); 
+	if((count % 2) == 0){
+		return 1;
+	}
+	return -1;
+}
+
+//MPI Error Printer
+void check(int e){
+	if(e != MPI_SUCCESS){
+		printf("MPI ERROR CODE: &d", e);
+	}
+}
+
+//Prints a vector
+void printvec(double *arr, int size){
+	int i = 0;
+	for(i = 0; i < size; i++){
+		printf("%f ", arr[i]);
+	}
+}
+
+MPI_Status status;
+
+int main(int argc, char **argv){
 	
-
 	//Dimension Paramter dim
-
 	int dim = (int)pow(2,(double)atoi(argv[1]));
 
-	
-
-	//Send and Recievce Parameters	
-
-	int numprocs,   /* number of processes in partition */
-
-    procid,         /* a process identifier */ 
-
-    numworkers,     /* number of worker processes */
-
-    source,         /* process id of message source */
-
-    dest,           /* process id of message destination */
-
-    nbytes,         /* number of bytes in message */
-
-    mtype,          /* message type */
-
-    intsize,        /* size of an integer in bytes */
-
-    dbsize,         /* size of a double float in bytes */
-
-    rows,           /* rows of A sent to each worker */ 
-
-    averow, extra, offset, 
-
-    i, j, k, count;
-
-
+	int procid, numprocs, numworkers;	
+	int dest;
 
 	//Allocate Memory for arguements
+	int  *vector;
 
-	int iter = 0;	
-
-	double **matrix;
-
-	matrix = (double**)malloc(sizeof(double**)*dim);
-
+	//Initiliaze the vector
+	vector = (int*)malloc(sizeof(int)*dim);
+	int iter;
 	for(iter = 0; iter < dim; iter++){
-
-		matrix[iter] = (double*)malloc(sizeof(double)*dim);
-
+		vector[iter] = 1;
 	}
 
-	double *vector = (double*)malloc(sizeof(double)*dim);
+	//Initialize Result Vector
+	int *result = (int*)malloc(sizeof(int)*dim);	
 
-	double *result = (double*)malloc(sizeof(double)*dim);
-
-
-
+	//MPI Params
+	int start_index, end_index, width, extra;
+	int temp = 0;
 	
-
-	MPI_Init(&argc, &argv);
-
-	MPI_Comm_rank(MPI_COMM_WORLD, &procid);
-
-	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);	
-
-	numworkers = numprocs - 1;
-
-	
-
-	
-
-	/********** master process **********/
-
-	if(procid == MASTER){
-
-		//Initialize Hadamard Matrix
-
-		for(i = 0; i < dim; i++){
-
-			for(j = 0; j < dim; j++){
-
-				matrix[i][j] = hadamard_entry(i,j);
-
-			}
-
-		}
-
-		//Initialize Argument Vector
-
-		for(i = 0; i < dim; i++){
-
-			vector[i] = rand()%2;	
-
-		}
-
-		//Send Parameters
-
-		averow = dim / numworkers; extra = dim % numworkers;
-
-		offset = 0; mtype = FROM_MASTER;
-
-		//Send
-
-		for(dest = 1; dest < numworkers; dest++){
-
-			rows = (dest <= extra) ? averow + 1 : averow;
-
-			MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-
-			MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-
-			count = rows*dim;
-
-			MPI_Send(&matrix[offset][0], count, MPI_DOUBLE, dest, mtype, MPI_COMM_WORLD);
-
-			count = dim;
-
-			MPI_Send(&vector, count, MPI_DOUBLE, dest, mtype, MPI_COMM_WORLD);
-
-			offset = offset + rows;
-
-		}
-
 		
-
-		//Recieve from workers
-
-
-
-	}
-
-	/********** worker process **********/
-
-	if(procid > MASTER){
-
-		//Receive the Data
-
-		mtype = FROM_MASTER;
-
-		source = MASTER;
-
-		MPI_Recv(&offset,1,MPI_INT,source,mtype,MPI_COMM_WORLD, &status);
-
-    	MPI_Recv(&rows,1,MPI_INT,source,mtype,MPI_COMM_WORLD, &status);
-
+	//Initialize MPI Framework	
+	MPI_Init(&argc, &argv);
+	//Assign IDs to all the nodes
+	MPI_Comm_rank(MPI_COMM_WORLD, &procid);
+	//Get the number of processes
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	
-
-		//Operate on the data
-
-		//Send the data
-
+	//Num workers is one minus processes due to master process	
+	numworkers = numprocs - 1;
+	width = (dim/numprocs);
+		
+	MPI_Bcast(&width, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+	MPI_Bcast(&(vector[0]), dim, MPI_INT, MASTER, MPI_COMM_WORLD);
+	MPI_Bcast(&dim, 1, MPI_INT, MASTER, MPI_COMM_WORLD);	
+	MPI_Bcast(&(result[0]), dim, MPI_INT, MASTER, MPI_COMM_WORLD);
+	
+	/********** master process **********/
+	if(procid == MASTER){
+		//printf("Master sees dim as %d\n",dim);
+		width = (dim)/numprocs;
+		if(width == 0){	//Number of workers > elements of the matrix
+			//Not sure what to do here	
+		}else{		//Number of workers < elements of the matrix
+			start_index = 0;
+			end_index = (width*dim) - 1;
+			for(dest = 1; dest <= numworkers; dest++){
+				MPI_Send(&start_index, 1, MPI_INT, dest, FROM_MASTER, MPI_COMM_WORLD);
+				MPI_Send(&end_index, 1, MPI_INT, dest, FROM_MASTER, MPI_COMM_WORLD);
+				start_index = end_index + 1;
+				end_index = start_index + (width*dim) - 1;
+			}
+			//Master Will do work
+			while(start_index <= ((dim*dim) - 1)){
+				int h_i = start_index / dim;
+				int h_j = 0;
+				int t_end = h_i + width - 1;
+				while(h_i <= t_end){
+					//printf("Processor %d is doing %d\n", procid, h_i);
+					int value = 0;
+					for(h_j = 0; h_j < dim; h_j = h_j + 1){
+						value += hadamard_entry(h_i, h_j);
+					}
+					result[h_i] = value;
+					printf("(%d, d) : %d\n", h_i, h_j, value);
+					h_i = h_i + 1;
+				}
+				start_index = end_index + 1;
+				end_index = start_index + (width*dim) - 1;
+			}
+		}
+	}
+	/********** worker process **********/
+	if(procid > MASTER){
+		MPI_Recv(&start_index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD, &status);
+		MPI_Recv(&end_index, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD, &status);
+		int h_i = start_index / dim; //Hadamard Matrix Index i
+		int h_j = 0; //Hadamard Matrix index j
+		int t_end = h_i + width - 1;
+		
+		while(h_i <= t_end){
+			
+			int value = 0;
+			for(h_j = 0; h_j < dim; h_j = h_j + 1){
+				value += hadamard_entry(h_i, h_j) + vector[h_j];
+			}
+			result[h_i] = value;
+			printf("(%d,%d) : %d\n", h_i, h_j, value);
+			h_i = h_i + 1;
+		}
+				
 	}
 
-
-
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize();
 
 	
-
-	free(vector);
-
 	free(result);
-
-	iter = 0;
-
-	for(iter = 0; iter < dim; iter++){
-
-		free(matrix[i]);	
-
-	}
-
-	free(matrix);
-
-
-
+	free(vector);
+	return EXIT_SUCCESS;
 }

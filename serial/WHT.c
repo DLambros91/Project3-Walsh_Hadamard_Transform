@@ -79,7 +79,6 @@ int main(int argc, char** argv){
 
 
 	//Perform Matrix Vector Multipliocation
-	int k;
 	for(i = 0; i < dimension; i++){
 		int sum = 0;
 		for(j = 0; j < dimension; j++){

@@ -46,17 +46,16 @@ int main(int argc, char* argv[]){
 
 	int*  vector;
 
-
 	int iter = 0;
+
 
 	vector = (int*)malloc(sizeof(int)*dim);
 
 	//Initialize the Vector
 	for(iter = 0; iter < dim; iter++){
 		vector[iter] = iter;
-		printf("%d ", vector[iter]);
+		printf("%d\t", vector[iter]);
 	}
-
 	printf("\n");
 	//Initialize result vector
 	int *result;
@@ -64,42 +63,36 @@ int main(int argc, char* argv[]){
 	for(iter = 0; iter < dim; iter++){
 		result[iter] = 0;
 	}
-
 	//Used for timing
 	double starttime, endtime;
 	starttime = get_time();
-	int count = 0;
+	int count = 1;
 	/********* start openmp *******/
 	int nthreads, tid;
 	nthreads = omp_get_num_threads();
-	int i;
-	for(i = dim/2; i > 1; i = i/2){
-		printf("i : %d\n", i);
-		int j;
-		for(j = 0; j < i; j = j + i){
-			int z;
-			for(z = j; z < j + i; z++){
+	int i, j, z, x;
+	x = 1;
+	for(i = dim/2; i >= 1; i = i/2){
+		#pragma omp parallel for
+		for(j = 0; j <= (int)pow(2,(double)x); j = (j + i + i)){
+			for(z = j; z < (j + i); z++){
 				result[z] = vector[z] + vector[z + i];
-				result[z+i] = vector[z] - vector[z + i];
+				result[z + i] = vector[z] - vector[z + i];
 			}
-			printf("\n");
 		}
+		#pragma omp parallel for
 		for(iter = 0; iter < dim; iter++){
 			vector[iter] = result[iter];
-			printf("%d ", vector[iter]);
 		}
-		printf("\n");
+		x++;
 	}
+
 
 	/********* end openmp *********/
 	endtime = get_time();
 	printf("Elapsed time %g\n ", (endtime - starttime));
-	for(iter = 0; iter < dim; iter++){
-		printf(" %d ", vector[iter]);
-	}
 
 	free(vector);
 	free(result);
-
 	return EXIT_SUCCESS;
 }
